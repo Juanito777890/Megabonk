@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MEGABONK - Battle Arena</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;overflow:hidden;background:#000}
+canvas{display:block;width:100vw;height:100vh}
+#ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+#hud{position:absolute;top:20px;left:20px;color:#fff;font-weight:bold;font-size:14px;text-shadow:0 0 10px #000;max-height:70vh;overflow-y:auto;pointer-events:all}
+.stat{margin:5px 0;padding:3px 8px;background:rgba(0,0,0,0.6);border-left:3px solid #ff6b00;border-radius:3px;font-size:13px}
+.stat-val{color:#ffff00}
+.gadget-list{margin-top:12px;padding-top:8px;border-top:1px solid #ff6b00}
+.gadget-item{background:rgba(255,107,0,0.15);padding:4px;margin:2px 0;border-radius:3px;font-size:11px;color:#0ff}
+#shop{position:fixed;bottom:20px;right:20px;background:rgba(0,0,0,0.95);border:2px solid #00ff00;border-radius:10px;padding:12px;width:320px;color:#fff;pointer-events:all;max-height:70vh;overflow-y:auto;z-index:20}
+#shop h3{color:#00ff00;margin-bottom:8px;font-size:16px;text-align:center}
+.shop-category{margin:8px 0;padding-top:8px;border-top:1px solid #00ff00}
+.shop-category h4{color:#00ff00;font-size:12px;margin-bottom:5px}
+.shop-item{background:rgba(0,255,0,0.1);border:1px solid #00ff00;padding:8px;margin:5px 0;border-radius:5px;font-size:11px;cursor:pointer;transition:all 0.2s}
+.shop-item:hover{background:rgba(0,255,0,0.25);transform:scale(1.03)}
+.shop-item-cost{color:#ffff00;font-weight:bold}
+.shop-button{width:100%;padding:6px;background:#00ff00;color:#000;border:none;border-radius:3px;cursor:pointer;font-weight:bold;margin-top:5px;font-size:11px}
+.shop-button:hover{background:#00dd00}
+.shop-button:disabled{background:#666;cursor:not-allowed;color:#333}
+#message{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:48px;font-weight:bold;text-shadow:0 0 20px #000;pointer-events:none;opacity:0;transition:opacity 0.3s}
+#message.show{opacity:1}
+#waveAlert{position:absolute;top:40%;left:50%;transform:translateX(-50%);font-size:72px;font-weight:bold;color:#ffff00;text-shadow:0 0 30px #ff6b00;opacity:0;transition:opacity 0.5s}
+#waveAlert.show{opacity:1}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="ui">
+<div id="hud">
+<div class="stat">❤️ HP: <span class="stat-val" id="hp">100</span>/<span id="maxHp">100</span></div>
+<div class="stat">💰 Gold: <span class="stat-val" id="gold">0</span></div>
+<div class="stat">⚡ Silver: <span class="stat-val" id="silver">0</span></div>
+<div class="stat">�� Luck: <span class="stat-val" id="luck">1.0x</span></div>
+<div class="stat">👟 Speed: <span class="stat-val" id="speed">1.0x</span></div>
+<div class="stat">🔨 DMG: <span class="stat-val" id="damage">10</span></div>
+<div class="stat">📶 Range: <span class="stat-val" id="range">1.0x</span></div>
+<div class="stat">👹 Wave: <span class="stat-val" id="wave">1</span></div>
+<div class="stat">🎯 Enemies: <span class="stat-val" id="enemyCount">0</span></div>
+<div class="gadget-list">
+<div style="color:#ffff00;font-weight:bold;margin-bottom:5px">🎮 GADGETS:</div>
+<div id="gadgetList"></div>
+</div>
+</div>
+
+<div id="shop">
+<h3>🏪 TIENDA</h3>
+
+<div class="shop-category">
+<h4>❤️ SALUD</h4>
+<div class="shop-item">
+<div>Max HP +20</div>
+<div class="shop-item-cost">💰 150 Gold</div>
+<button class="shop-button" onclick="buyUpgrade('hp', 150, 20)">Comprar</button>
+</div>
+<div class="shop-item">
+<div>Curación 100 HP</div>
+<div class="shop-item-cost">⚡ 100 Silver</div>
+<button class="shop-button" onclick="buyUpgrade('heal', 100, 100)">Comprar</button>
+</div>
+</div>
+
+<div class="shop-category">
+<h4>⚔️ ATAQUE</h4>
+<div class="shop-item">
+<div>Damage +8</div>
+<div class="shop-item-cost">💰 120 Gold</div>
+<button class="shop-button" onclick="buyUpgrade('damage', 120, 8)">Comprar</button>
+</div>
+<div class="shop-item">
+<div>Range +0.3x</div>
+<div class="shop-item-cost">💰 160 Gold</div>
+<button class="shop-button" onclick="buyUpgrade('range', 160, 0.3)">Comprar</button>
+</div>
+<div class="shop-item">
+<div>Luck +0.2x</div>
+<div class="shop-item-cost">💰 250 Gold</div>
+<button class="shop-button" onclick="buyUpgrade('luck', 250, 0.2)">Comprar</button>
+</div>
+</div>
+
+<div class="shop-category">
+<h4>🏃 MOVIMIENTO</h4>
+<div class="shop-item">
+<div>Speed +0.3x</div>
+<div class="shop-item-cost">💰 100 Gold</div>
+<button class="shop-button" onclick="buyUpgrade('speed', 100, 0.3)">Comprar</button>
+</div>
+</div>
+
+<div class="shop-category">
+<h4>🛡️ DEFENSA</h4>
+<div class="shop-item">
+<div>+1 Escudo</div>
+<div class="shop-item-cost">⚡ 80 Silver</div>
+<button class="shop-button" onclick="buyUpgrade('shield', 80, 1)">Comprar</button>
+</div>
+</div>
+
+</div>
+</div>
+
+<div id="message"></div>
+<div id="waveAlert"></div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// GADGETS POR OLEADA
+const GADGET_SYSTEM = {
+  1: { name: '⚡ Double Hit', desc: 'Golpe 2x por swing' },
+  2: { name: '🌪️ Spin Attack', desc: 'Ataque circular giratorio' },
+  3: { name: '🔥 Shockwave', desc: 'Onda expansiva al golpear' },
+  4: { name: '⏱️ Slow Field', desc: 'Los enemigos se ralentizan cerca' },
+  5: { name: '💥 AOE Blast', desc: 'Explosión en área al golpear' },
+  6: { name: '🛡️ Shield', desc: 'Escudo que bloquea daño' },
+  7: { name: '⚙️ Auto Spin', desc: 'El martillo gira automáticamente' },
+  8: { name: '👻 Phase', desc: 'Atraviesa enemigos por 2 seg' },
+  9: { name: '🎲 Ricochet', desc: 'Golpes rebotan en enemigos' },
+  10: { name: '🌟 Supernova', desc: 'Explosión masiva cada 5 seg' }
+};
+
+// TIPOS DE ENEMIGOS VARIADOS
+const ENEMY_TYPES = [
+  { id: 'slime', name: 'Slime', color: '#00ff00', hp: 15, speed: 0.5, dmg: 2, size: 20, rarity: 0.4 },
+  { id: 'goblin', name: 'Goblin', color: '#ffff00', hp: 20, speed: 1.5, dmg: 4, size: 25, rarity: 0.3 },
+  { id: 'skeleton', name: 'Skeleton', color: '#cccccc', hp: 30, speed: 1, dmg: 6, size: 28, rarity: 0.15 },
+  { id: 'orc', name: 'Orc', color: '#ff6600', hp: 50, speed: 0.8, dmg: 8, size: 40, rarity: 0.1 },
+  { id: 'demon', name: 'Demon', color: '#ff00ff', hp: 80, speed: 1.2, dmg: 12, size: 45, rarity: 0.04 },
+  { id: 'ghost', name: 'Ghost', color: '#0088ff', hp: 25, speed: 2, dmg: 3, size: 22, rarity: 0.08 },
+  { id: 'troll', name: 'Troll', color: '#00aa00', hp: 100, speed: 0.4, dmg: 15, size: 50, rarity: 0.03 },
+  { id: 'vampire', name: 'Vampire', color: '#8800aa', hp: 40, speed: 1.8, dmg: 10, size: 30, rarity: 0.05 }
+];
+
+// Configuración
+const PLAYER_SIZE = 35;
+const HAMMER_SIZE = 60;
+const WORLD_WIDTH = canvas.width;
+const WORLD_HEIGHT = canvas.height;
+
+// Estado del jugador
+let player = {
+  x: canvas.width / 2,
+  y: canvas.height - 100,
+  width: PLAYER_SIZE,
+  height: PLAYER_SIZE,
+  maxHp: 100,
+  hp: 100,
+  damage: 10,
+  speed: 1.0,
+  luck: 1.0,
+  range: 1.0,
+  gold: 0,
+  silver: 0,
+  hammerAngle: 0,
+  swinging: false,
+  isAlive: true,
+  gadgets: [],
+  shields: 0,
+  activeEffects: {}
+};
+
+let enemies = [];
+let particles = [];
+let waveNumber = 1;
+let waveKills = 0;
+let baseEnemiesPerWave = 6; // starting enemies for wave 1
+let ENEMIES_INCREMENT = 3; // how many extra enemies each wave
+let MAX_ENEMIES_CAP = 80;  // hard cap to avoid huge lag
+let spawnCounter = 0;
+let maxEnemiesPerWave = Math.min(baseEnemiesPerWave + (waveNumber - 1) * ENEMIES_INCREMENT, MAX_ENEMIES_CAP);
+let totalSpawnedThisWave = 0; // track total spawned this wave (so we don't spawn more than allowed)
+let lastWaveTime = 0;
+
+// Enemigos
+class Enemy {
+  constructor(x, y, typeId = 'slime') {
+    const type = ENEMY_TYPES.find(t => t.id === typeId) || ENEMY_TYPES[0];
+    Object.assign(this, type);
+    this.x = x;
+    this.y = y;
+    this.vx = 0;
+    this.vy = 0;
+    // tougher scaling: multiply base HP/dmg by wave factor and add variation
+    this.hp = Math.floor(type.hp * (1 + waveNumber * 0.18) + Math.random() * (waveNumber * 2));
+    this.maxHp = this.hp;
+    this.dmg = Math.floor(type.dmg * (1 + waveNumber * 0.12));
+    this.speed = Math.max(0.2, (type.speed * (1 + waveNumber * 0.02)) * (player.gadgets.includes('⏱️ Slow Field') ? 0.6 : 1));
+    this.attackCooldown = Math.random() * 30;
+    this.rotation = 0;
+    // assign a random special ability depending on wave (rarer abilities later)
+    this.ability = null; // 'shooter','split','shield','kamikaze','teleport','charge'
+    const abilRoll = Math.random();
+    if (waveNumber > 6 && abilRoll < 0.05) this.ability = 'troll-shield';
+    else if (waveNumber > 4 && abilRoll < 0.12) this.ability = 'shooter';
+    else if (waveNumber > 3 && abilRoll < 0.18) this.ability = 'split';
+    else if (waveNumber > 2 && abilRoll < 0.25) this.ability = 'charge';
+    else if (waveNumber > 6 && abilRoll < 0.28) this.ability = 'teleport';
+    else if (waveNumber > 8 && abilRoll < 0.30) this.ability = 'kamikaze';
+    this.abilityCooldown = Math.floor(60 + Math.random() * 120);
+  }
+
+  update() {
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    const dist = Math.hypot(dx, dy);
+    // movement behavior may change with ability
+    if (this.ability === 'charge' && this.abilityCooldown <= 0) {
+      // burst toward player
+      this.x += (dx / dist) * (this.speed * 4);
+      this.y += (dy / dist) * (this.speed * 4);
+      this.abilityCooldown = 90 + Math.random() * 60;
+    } else if (this.ability === 'teleport' && this.abilityCooldown <= 0) {
+      // teleport to a random edge position near player
+      this.x = player.x + (Math.random() - 0.5) * 400;
+      this.y = player.y + (Math.random() - 0.5) * 300;
+      this.abilityCooldown = 120 + Math.random() * 180;
+    } else {
+      if (dist > 0) {
+        this.x += (dx / dist) * this.speed;
+        this.y += (dy / dist) * this.speed;
+      }
+    }
+    this.attackCooldown--;
+    this.rotation += 0.05;
+
+    // ability behaviors
+    this.abilityCooldown = Math.max(0, this.abilityCooldown - 1);
+    if (this.ability === 'shooter' && this.abilityCooldown === 0) {
+      spawnProjectile(this.x, this.y, player.x, player.y, Math.ceil(this.dmg * 0.7));
+      this.abilityCooldown = 80 + Math.random() * 80;
+    }
+    if (this.ability === 'kamikaze' && dist < 120) {
+      // explode
+      damagePlayer(Math.ceil(this.dmg * 1.5));
+      createParticles(this.x, this.y, 16, '#ff4444');
+      this.hp = 0;
+    }
+
+    if (dist < this.size + player.width && this.attackCooldown <= 0) {
+      damagePlayer(this.dmg);
+      this.attackCooldown = 60;
+    }
+  }
+
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rotation);
+    ctx.fillStyle = this.color;
+    ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+    ctx.restore();
+    
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(Math.ceil(this.hp), this.x, this.y + 3);
+  }
+
+  takeDamage(amount) {
+    this.hp -= amount;
+  }
+
+  isDead() {
+    return this.hp <= 0;
+  }
+}
+
+// Partículas
+class Particle {
+  constructor(x, y, vx, vy, color, life = 30) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx;
+    this.vy = vy;
+    this.color = color;
+    this.life = life;
+    this.maxLife = life;
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.2;
+    this.life--;
+  }
+
+  draw() {
+    ctx.globalAlpha = this.life / this.maxLife;
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  isDead() {
+    return this.life <= 0;
+  }
+}
+
+// Sistema de entrada
+let keys = {};
+let isSwinging = false;
+
+window.addEventListener('keydown', e => keys[e.key] = true);
+window.addEventListener('keyup', e => keys[e.key] = false);
+window.addEventListener('mousedown', () => isSwinging = true);
+window.addEventListener('mouseup', () => isSwinging = false);
+
+// FUNCIONES DE TIENDA
+function buyUpgrade(type, cost, value) {
+  if (type === 'hp') {
+    if (player.gold >= cost) {
+      player.gold -= cost;
+      player.maxHp += value;
+      player.hp = player.maxHp;
+      showMessage(`+${value} HP Max!`);
+    }
+  } else if (type === 'damage') {
+    if (player.gold >= cost) {
+      player.gold -= cost;
+      player.damage += value;
+      showMessage(`+${value} DMG!`);
+    }
+  } else if (type === 'range') {
+    if (player.gold >= cost) {
+      player.gold -= cost;
+      player.range += value;
+      showMessage(`+${value}x RANGE!`);
+    }
+  } else if (type === 'luck') {
+    if (player.gold >= cost) {
+      player.gold -= cost;
+      player.luck += value;
+      showMessage(`+${value}x LUCK!`);
+    }
+  } else if (type === 'speed') {
+    if (player.gold >= cost) {
+      player.gold -= cost;
+      player.speed += value;
+      showMessage(`+${value}x SPEED!`);
+    }
+  } else if (type === 'heal') {
+    if (player.silver >= cost) {
+      player.silver -= cost;
+      player.hp = Math.min(player.maxHp, player.hp + value);
+      showMessage(`+${value} HP!`);
+    }
+  } else if (type === 'shield') {
+    if (player.silver >= cost) {
+      player.silver -= cost;
+      player.shields += value;
+      showMessage(`+${value} Shield!`);
+    }
+  }
+}
+
+// GADGETS ACTIVOS
+let lastSupernovaTime = 0;
+let shieldActive = false;
+
+function activateGadgets() {
+  if (player.gadgets.includes('⚙️ Auto Spin')) {
+    player.hammerAngle += 0.2;
+  }
+  
+  if (player.gadgets.includes('🛡️ Shield')) {
+    shieldActive = true;
+  }
+  
+  if (player.gadgets.includes('🌟 Supernova')) {
+    lastSupernovaTime++;
+    if (lastSupernovaTime > 300) {
+      triggerSupernova();
+      lastSupernovaTime = 0;
+    }
+  }
+}
+
+function triggerSupernova() {
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    if (Math.hypot(enemies[i].x - player.x, enemies[i].y - player.y) < 400) {
+      const dmg = Math.ceil(player.damage * player.luck * 2);
+      enemies[i].takeDamage(dmg);
+      createParticles(enemies[i].x, enemies[i].y, 12, '#ffff00');
+      if (enemies[i].isDead()) {
+        killEnemy(enemies[i]);
+        enemies.splice(i, 1);
+      }
+    }
+  }
+}
+
+function damagePlayer(amount) {
+  if (player.shields > 0) {
+    player.shields--;
+    createParticles(player.x, player.y, 15, '#0088ff');
+    return;
+  }
+  player.hp = Math.max(0, player.hp - amount);
+  if (player.hp <= 0) {
+    player.isAlive = false;
+    showMessage('💀 GAME OVER');
+  }
+}
+
+function createParticles(x, y, count = 8, color = '#ffff00') {
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2;
+    const vx = Math.cos(angle) * 8;
+    const vy = Math.sin(angle) * 8;
+    particles.push(new Particle(x, y, vx, vy, color));
+  }
+}
+
+function showMessage(text) {
+  const msg = document.getElementById('message');
+  msg.textContent = text;
+  msg.classList.add('show');
+  setTimeout(() => msg.classList.remove('show'), 800);
+}
+
+function killEnemy(enemy) {
+  // Make rewards harder: lower base rewards and rarer silver
+  const goldReward = Math.floor((5 + waveNumber * 2) * (1 + waveNumber * 0.05));
+  const silverReward = Math.random() < Math.max(0.05, 0.15 + waveNumber * 0.01) ? Math.floor(2 + Math.floor(waveNumber / 2)) : 0;
+  player.gold += goldReward;
+  player.silver += silverReward;
+  createParticles(enemy.x, enemy.y, 12, '#ffd700');
+  waveKills++;
+}
+
+function spawnEnemy() {
+  const side = Math.random();
+  let x, y;
+  if (side < 0.25) {
+    x = Math.random() * canvas.width;
+    y = -50;
+  } else if (side < 0.5) {
+    x = Math.random() * canvas.width;
+    y = canvas.height + 50;
+  } else if (side < 0.75) {
+    x = -50;
+    y = Math.random() * canvas.height;
+  } else {
+    x = canvas.width + 50;
+    y = Math.random() * canvas.height;
+  }
+  
+  const rand = Math.random();
+  let cumulativeRarity = 0;
+  let selectedType = 'slime';
+  for (const type of ENEMY_TYPES) {
+    cumulativeRarity += type.rarity;
+    if (rand < cumulativeRarity) {
+      selectedType = type.id;
+      break;
+    }
+  }
+  
+  enemies.push(new Enemy(x, y, selectedType));
+  totalSpawnedThisWave++;
+}
+
+// PROJECTILES fired by shooter-type enemies
+let projectiles = [];
+class Projectile {
+  constructor(x, y, tx, ty, dmg=5) {
+    this.x = x; this.y = y; this.dmg = dmg;
+    const dx = tx - x; const dy = ty - y; const dist = Math.hypot(dx, dy) || 1;
+    this.vx = (dx / dist) * 6; this.vy = (dy / dist) * 6;
+    this.life = 200;
+  }
+  update() {
+    this.x += this.vx; this.y += this.vy; this.life--;
+    // hit player
+    if (Math.hypot(this.x - player.x, this.y - player.y) < player.width) {
+      damagePlayer(this.dmg);
+      this.life = 0;
+    }
+  }
+  draw() {
+    ctx.fillStyle = '#ff8800'; ctx.beginPath(); ctx.arc(this.x, this.y, 5,0,Math.PI*2); ctx.fill();
+  }
+  isDead(){return this.life<=0}
+}
+
+function spawnProjectile(x,y,tx,ty,dmg){ projectiles.push(new Projectile(x,y,tx,ty,dmg)); }
+
+function nextWave() {
+  waveNumber++;
+  waveKills = 0;
+  lastWaveTime = Date.now();
+  
+  if (GADGET_SYSTEM[waveNumber]) {
+    player.gadgets.push(GADGET_SYSTEM[waveNumber].name);
+    showMessage(`🎮 ${GADGET_SYSTEM[waveNumber].name}!`);
+    
+    const alert = document.getElementById('waveAlert');
+    alert.textContent = `WAVE ${waveNumber}! 🎮 ${GADGET_SYSTEM[waveNumber].name}`;
+    alert.classList.add('show');
+    setTimeout(() => alert.classList.remove('show'), 2000);
+  }
+  
+  // Calcular número limitado de enemigos para la nueva oleada
+  maxEnemiesPerWave = Math.min(baseEnemiesPerWave + (waveNumber - 1) * ENEMIES_INCREMENT, MAX_ENEMIES_CAP);
+  // reset spawn counters for the new wave
+  spawnCounter = 0;
+  totalSpawnedThisWave = 0;
+
+  // Occasionally spawn a boss on milestone waves (every 5th wave)
+  if (waveNumber % 5 === 0) {
+    // spawn an extra big boss immediately
+    spawnBoss();
+  }
+}
+
+function spawnBoss(){
+  // define a heavy boss type and push it to enemies
+  const bx = canvas.width/2 + (Math.random()-0.5)*200;
+  const by = -120;
+  const boss = new Enemy(bx, by, 'troll');
+  // amplify boss stats
+  boss.hp = Math.floor(boss.hp * 4 + waveNumber * 50);
+  boss.maxHp = boss.hp;
+  boss.dmg = Math.floor(boss.dmg * 3 + waveNumber * 5);
+  boss.size = Math.max(boss.size*1.8, 80);
+  boss.color = '#ff0044';
+  boss.ability = 'shooter';
+  boss.abilityCooldown = 40;
+  enemies.push(boss);
+  // count boss in spawned total so wave doesn't immediately end
+  totalSpawnedThisWave++;
+  showMessage('¡BOSS EN LA ARENA!');
+}
+
+function drawPlayer() {
+  ctx.fillStyle = '#ff6b00';
+  ctx.fillRect(player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
+  
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 24px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('🔨', player.x, player.y + 5);
+  
+  // ESCUDOS
+  if (player.shields > 0) {
+    ctx.strokeStyle = '#0088ff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.width * (0.8 + player.shields * 0.2), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(0, 136, 255, 0.1)';
+    ctx.fill();
+  }
+  
+  // MARTILLO
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  if (isSwinging) player.hammerAngle += 0.3;
+  else player.hammerAngle *= 0.9;
+  ctx.rotate(player.hammerAngle);
+  
+  ctx.strokeStyle = '#8B4513';
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(0, HAMMER_SIZE * player.range);
+  ctx.stroke();
+  ctx.fillStyle = '#ffa500';
+  ctx.fillRect(-10, HAMMER_SIZE * player.range - 8, 20, 16);
+  
+  if (player.gadgets.includes('🌪️ Spin Attack') && isSwinging) {
+    ctx.strokeStyle = '#ffff00';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, HAMMER_SIZE * 1.5, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  
+  ctx.restore();
+}
+
+function checkHammerCollision() {
+  const hammerX = player.x + Math.cos(player.hammerAngle) * HAMMER_SIZE * player.range;
+  const hammerY = player.y + Math.sin(player.hammerAngle) * HAMMER_SIZE * player.range;
+  
+  const hitsPerSwing = player.gadgets.includes('⚡ Double Hit') ? 2 : 1;
+  
+  for (let hit = 0; hit < hitsPerSwing; hit++) {
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const enemy = enemies[i];
+      const dx = hammerX - enemy.x;
+      const dy = hammerY - enemy.y;
+      const dist = Math.hypot(dx, dy);
+      
+      if (dist < HAMMER_SIZE * player.range + enemy.size) {
+        const dmg = Math.ceil(player.damage * player.luck * (1 + waveNumber * 0.05));
+        enemy.takeDamage(dmg);
+        
+        createParticles(enemy.x, enemy.y, 6, '#ffff00');
+        showMessage(`+${dmg}`);
+        
+        if (player.gadgets.includes('💥 AOE Blast')) {
+          for (let j = enemies.length - 1; j >= 0; j--) {
+            if (Math.hypot(enemies[j].x - enemy.x, enemies[j].y - enemy.y) < 80) {
+              const aoeDmg = Math.ceil(dmg * 0.6);
+              enemies[j].takeDamage(aoeDmg);
+              createParticles(enemies[j].x, enemies[j].y, 4, '#ff6600');
+            }
+          }
+        }
+        
+        if (enemy.isDead()) {
+          killEnemy(enemy);
+          enemies.splice(i, 1);
+        }
+      }
+    }
+  }
+}
+
+function update() {
+  if (!player.isAlive) return;
+  
+  activateGadgets();
+  
+  let dx = 0, dy = 0;
+  if (keys['w'] || keys['W'] || keys['ArrowUp']) dy -= player.speed;
+  if (keys['s'] || keys['S'] || keys['ArrowDown']) dy += player.speed;
+  if (keys['a'] || keys['A'] || keys['ArrowLeft']) dx -= player.speed;
+  if (keys['d'] || keys['D'] || keys['ArrowRight']) dx += player.speed;
+  
+  player.x = Math.max(PLAYER_SIZE, Math.min(canvas.width - PLAYER_SIZE, player.x + dx));
+  player.y = Math.max(PLAYER_SIZE, Math.min(canvas.height - PLAYER_SIZE, player.y + dy));
+  
+  if (isSwinging) {
+    checkHammerCollision();
+  }
+  
+  spawnCounter++;
+  // Spawn only while we haven't reached the total allowed spawns for this wave
+  if (totalSpawnedThisWave < maxEnemiesPerWave && spawnCounter % 20 === 0) {
+    spawnEnemy();
+  }
+
+  // Wave complete when there are no active enemies AND we've spawned the full allotment for this wave
+  if (enemies.length === 0 && totalSpawnedThisWave >= maxEnemiesPerWave) {
+    nextWave();
+  }
+  
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    enemies[i].update();
+    if (enemies[i].y > canvas.height + 200 || enemies[i].x < -200 || enemies[i].x > canvas.width + 200) {
+      enemies.splice(i, 1);
+    }
+  }
+  
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].update();
+    if (particles[i].isDead()) {
+      particles.splice(i, 1);
+    }
+  }
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    projectiles[i].update();
+    if (projectiles[i].isDead()) projectiles.splice(i,1);
+  }
+  
+  document.getElementById('hp').textContent = player.hp;
+  document.getElementById('maxHp').textContent = player.maxHp;
+  document.getElementById('gold').textContent = player.gold;
+  document.getElementById('silver').textContent = player.silver;
+  document.getElementById('luck').textContent = player.luck.toFixed(1) + 'x';
+  document.getElementById('speed').textContent = player.speed.toFixed(1) + 'x';
+  document.getElementById('damage').textContent = player.damage;
+  document.getElementById('range').textContent = player.range.toFixed(1) + 'x';
+  document.getElementById('wave').textContent = waveNumber;
+  document.getElementById('enemyCount').textContent = enemies.length;
+  
+  const gadgetList = document.getElementById('gadgetList');
+  gadgetList.innerHTML = player.gadgets.map(g => `<div class="gadget-item">${g}</div>`).join('');
+}
+
+function draw() {
+  ctx.fillStyle = 'rgba(26, 26, 46, 0.15)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  for (const enemy of enemies) {
+    enemy.draw();
+    ctx.fillStyle = '#ff0000';
+    const hpBarWidth = (enemy.hp / enemy.maxHp) * enemy.size;
+    ctx.fillRect(enemy.x - hpBarWidth / 2, enemy.y - enemy.size / 2 - 12, hpBarWidth, 2);
+  }
+  
+  for (const p of particles) {
+    p.draw();
+  }
+  for (const pr of projectiles) pr.draw();
+  
+  drawPlayer();
+  
+  ctx.fillStyle = '#00ff00';
+  ctx.fillRect(10, 200, (player.hp / player.maxHp) * 200, 20);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(10, 200, 200, 20);
+}
+
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+gameLoop();
+</script>
+</body>
+</html>
